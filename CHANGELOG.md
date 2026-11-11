@@ -1,5 +1,20 @@
 # 变更记录
 
+## v8 — 2026-11-11
+
+### 合并：完整人格、安装器与 DSH 插件并入本仓
+
+| # | 变更 | 来源 |
+|---|---|---|
+| 1 | 新增 `personality.md`（35730 B）：中文外壳 49 章 + kernel + contract，成为 omp 安装默认源 | 完整版人格 |
+| 2 | 新增 `install-omp.sh`：双通道安装（`PERSONALITY.md` + `omp-armor`），完整版优先、缺失才合成 | 本次合并 |
+| 3 | 新增 `install.ps1` + `plugin/`（186 文件）+ `prompt-custom.json` + 激活词：DSH 桌面插件通道 | 插件仓 |
+| 4 | `kernel.md` / `contract.md` 逐字节未改（md5 `06b3717d` / `e533e1a4`） | 校验 |
+| 5 | README 合并为一份主文档：五种部署形态、omp 验收、交给 AI 装；插件原文移入 `docs/DSH-PLUGIN.md` | 本次合并 |
+| 6 | 新增 `DISCLAIMER.md`、`docs/screenshots/`、`telegram-channel.png` | 插件仓 |
+
+合并原则：单一真源。人格只保留 `personality.md`（全量）+ `kernel.md` / `contract.md`（组成件），安装器按优先级取源，不内置副本。
+
 ## v7 — 2026-11
 
 ### 阶梯与验收

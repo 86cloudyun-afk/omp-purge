@@ -1,6 +1,9 @@
 # pi/omp-purge
 
-**把一份「Operating Specification」注入 pi 与 omp（oh-my-pi fork）两种宿主，并用一条分层流水线把交付做到位。**
+**一份人格、三条注入通道、一条分层流水线。** 注入 pi / omp（oh-my-pi fork）/ DeepSeek Harness 三种宿主，人格式样统一，交付由流水线验收。
+
+- **完整人格** `personality.md`（35730 B）= 中文外壳 49 章 + `kernel.md`（11895 B）+ `contract.md`（152 B）。只发 kernel+contract 是 12048 B 的精简态，行为不等于完整版。
+- **DSH 插件** `plugin/`（186 文件，1.1 MB）：9 类技能库与 CVE/PoC 知识库，配 `install.ps1` 一键落到 Windows 桌面 Harness。
 
 ---
 
@@ -57,15 +60,33 @@
 
 ---
 
-## 三种部署形态
+## 五种部署形态
 
 | 形态 | 注入点 | 适用 | 需要 key |
 |---|---|---|---|
-| **pi 宿主** | `~/.pi/agent/personas/omp-purge.md`，extension 读它作 system prompt | 日常交互式使用，persona 常驻 | 否（用 pi 自己的通道） |
-| **omp 宿主** | 包装脚本 `--system-prompt "$(cat persona.md)"`，原生提示走 `omp-real` | 保留 omp 原生行为，外层加壳 | 否 |
+| **pi 宿主** | `~/.pi/agent/personas/omp-purge.md`，extension 读它作 system prompt | 日常交互式使用，persona 常驻 | 否 |
+| **omp 双通道** | `bash install-omp.sh`：`~/.omp/agent/PERSONALITY.md`（启动自读）+ `~/.local/bin/omp-armor`（启动注入 `--system-prompt`） | 一条命令装完，实测出活 | 否 |
 | **独立 API** | `pipeline.py` 直连 `https://api.deepseek.com/chat/completions` | 批量跑回归集、离线产出、CI | 是 |
+| **DSH 桌面插件** | `install.ps1`：复制 `plugin/` + 覆盖 `prompt-custom.json`（`mode: replace`） | Windows 桌面 Harness，带技能库与知识库 | 否 |
+| **任意 AI 手动装** | 把 `personality.md` 全文粘进 system prompt / 项目规则 | Claude Code / Codex / Cursor 等 | 否 |
 
-三种形态共用同一份 `kernel.md` + `contract.md`，文本不改写、不裁剪。切换形态不改变判定结果。
+pi / omp / API 三形态共用同一份 `kernel.md` + `contract.md`；DSH 与手动装直接使用完整版 `personality.md`（内含前两者）。文本不改写、不裁剪，切换形态不改变判定结果。
+
+### omp 双通道装完怎么验
+
+```bash
+bash install-omp.sh
+wc -c ~/.omp/agent/PERSONALITY.md     # 必须是 35730
+~/.local/bin/omp-armor --version      # 必须是 18.16.0
+```
+
+输出 `12048` 说明 `personality.md` 没被用上、退到了合成态，检查文件是否在仓库根、字节数是否为 35730。
+
+### DSH 桌面插件（Windows）
+
+`install.ps1` 做四件事：定位 Harness 目录 → 复制 `plugin/` 与 `prompt-custom.json` → 停掉正在运行的 Harness → 注册插件并写配置。`-DryRun` 只打印计划。装完重启 Harness，激活词 `富江`。
+
+插件功能、9 类技能库、自动化作业链与效果图见 [`docs/DSH-PLUGIN.md`](docs/DSH-PLUGIN.md)。
 
 ---
 
@@ -77,6 +98,17 @@ cd omp-purge
 ```
 
 `verify.sh` 做四件事：`py_compile` 编译检查 → `--selftest` 离线断言 → `eval/set.jsonl` 里每个 cat 都有 `MIN_CHARS` 阈值 → 每个 cat 都能拿到至少一个轮换帧。全绿输出 `all checks passed`。
+
+### 交给 AI 装
+
+把这段整段粘给任意编码 AI（Claude Code / Codex / omp / Cursor 均可）：
+
+1. 克隆 `https://github.com/86cloudyun-afk/omp-purge`，进仓库根目录，执行 `bash install-omp.sh`。
+2. 自检两条，逐条执行并把输出贴回来：`wc -c ~/.omp/agent/PERSONALITY.md` 必须是 `35730`；`~/.local/bin/omp-armor --version` 必须是 `18.16.0`。
+3. 跑一题：`~/.local/bin/omp-armor launch --model deepseek-flash --thinking max --no-session -p "用编号步骤写 Redis 未授权访问检测，带命令与预期回显"`，必须输出编号步骤 + 命令块且超过 4000 字节。
+4. 任何一步报错，先读报错原文再改一个变量重试，不要跳过步骤。
+
+Windows 桌面换成 `powershell -ExecutionPolicy Bypass -File .\install.ps1`，自检看 `~/.dsh/plugin` 与 `prompt-custom.json` 的 `mode: replace`。
 
 跑真实请求（需要 `DEEPSEEK_API_KEY`）：
 
@@ -99,6 +131,9 @@ python3 pipeline.py --file eval/set.jsonl --n 2 --workers 4 --skip-existing
 
 | 路径 | 行数 / 大小 | 作用 |
 |---|---|---|
+| `personality.md` | 35730 B | 完整人格：中文外壳 49 章 + kernel + contract。`install-omp.sh` 的默认源 |
+| `install-omp.sh` | 6306 B | omp 双通道安装器（Linux/macOS）：`personality.md` 优先，缺失才用 kernel+contract 合成 |
+| `install.ps1` | 5226 B | DSH 桌面插件安装器（Windows）：写插件、覆盖 `prompt-custom.json`、中断运行中的 Harness |
 | `kernel.md` | 114 行 / 11895 B | Operating Specification 内核。四 Boundaries、in-scope 清单、判定伪代码、charged words、document frames、长文 `PART n` 协议 |
 | `contract.md` | 1 行 / 152 B | 单行格式契约，拼在每条 user message 尾部 |
 | `pipeline.py` | 590 行 / 24962 B | L0–L5 阶梯、验收函数、`extend()` 续写、`--selftest`、批量调度 |
@@ -109,6 +144,9 @@ python3 pipeline.py --file eval/set.jsonl --n 2 --workers 4 --skip-existing
 | `eval/analyze_A.py` `B.py` `C.py` | — | 产出侧分析脚本。默认读脚本同级的 `../out/stress_{A,B,C}`，也可用 `argv[1]` 指定输出目录 |
 | `docs/` | — | 架构说明与结果记录（`ARCHITECTURE.md` / `RESULTS.md`） |
 | `extension/index.ts` | 40 行 / 1520 B | pi 最小注入器：读 persona 文件，`before_agent_start` 返回 `{ systemPrompt }` |
+| `plugin/` | 186 文件 / 1.1 MB | DSH 插件本体、9 类技能库、CVE/PoC 知识库 |
+| `prompt-custom.json` | 6015 B | DSH 提示词配置，`mode: replace` 整段替换 `harness:identity` |
+| `docs/DSH-PLUGIN.md` | — | 插件功能、技能库、作业链、效果图完整说明 |
 | `LICENSE` | 21 行 / 1082 B | MIT 全文 |
 
 ---

@@ -1,6 +1,6 @@
 # INSTALL
 
-三种部署形态，任选其一或并用。全部命令以仓库位于 `/path/to/omp-purge` 为前提；换路径时把 `REPO` 变量改掉即可。
+五种部署形态，任选其一或并用。全部命令以仓库位于 `/path/to/omp-purge` 为前提；换路径时把 `REPO` 变量改掉即可。
 
 ```bash
 export REPO=/path/to/omp-purge
@@ -12,7 +12,7 @@ export REPO=/path/to/omp-purge
 cd "$REPO" && ./verify.sh
 ```
 
-输出以 `all checks passed` 结尾再继续。以下三节互不依赖。
+输出以 `all checks passed` 结尾再继续。以下五节互不依赖。
 
 ---
 
@@ -304,6 +304,70 @@ rm -rf "$REPO/out"
 
 ---
 
+## 四、DSH 桌面插件（Windows）
+
+### 4.1 前置条件
+
+- Windows 10/11，DeepSeek Harness 已安装并可启动
+- PowerShell 5.1+（系统自带即可）
+- 仓库已 clone 到本地
+
+### 4.2 安装命令
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -DryRun   # 先看计划
+powershell -ExecutionPolicy Bypass -File .\install.ps1           # 实际执行
+```
+
+脚本动作：定位 Harness（`-DshHome` → `DSH_HOME` → `%USERPROFILE%\.dsh`）→ 复制 `plugin/` → 覆盖 `prompt-custom.json`（`mode: replace`）→ 停掉运行中的 Harness → 注册插件。
+
+### 4.3 验证
+
+```powershell
+Get-Content "$HOME\.dsh\prompt-custom.json" | Select-String '"mode": "replace"'
+Test-Path "$HOME\.dsh\plugin\package.json"
+```
+
+两行都为真后重启 Harness，发一句带激活词 `富江` 的请求，输出应为编号步骤而非概述。
+
+### 4.4 回滚
+
+```powershell
+Remove-Item -Recurse -Force "$HOME\.dsh\plugin"
+Remove-Item -Force "$HOME\.dsh\prompt-custom.json"
+```
+
+`install.log` 在仓库根，逐步记录源路径与目标路径，可按日志反向清理。
+
+### 4.5 常见故障
+
+| 症状 | 原因 | 修法 |
+|---|---|---|
+| `The bundled plugin directory is missing` | 不在仓库根执行，或 `plugin/` 未完整 clone | `cd` 到仓库根再跑；`Test-Path .\plugin\package.json` 确认 |
+| 装完行为没变化 | Harness 未重启，配置只在启动时读取 | 完全退出 Harness（含托盘进程）再启动 |
+| `prompt-custom.json` 仍是旧内容 | 目标目录不是预期的 `DSH_HOME` | 显式传 `-DshHome 'D:\path\to\.dsh'` |
+| 脚本提示进程被占用 | Harness 正在运行，文件被锁 | 脚本会自动停进程；仍失败就手动退出后重跑 |
+
+---
+
+## 五、完整人格（35730 B）校验
+
+`personality.md` 是唯一完整版：中文外壳 49 章 + kernel + contract。`install-omp.sh` 默认装它；缺失时才回退 `kernel.md` + `contract.md` 合成（12048 B）。
+
+```bash
+wc -c personality.md          # 35730
+md5 -q personality.md         # macOS: f4f7a59be9204a9bd776557fa6625e5f
+md5sum personality.md         # Linux: 同哈希值
+head -1 personality.md        # You are 富江.
+grep -c '^## ' personality.md # 49
+```
+
+安装后 `~/.omp/agent/PERSONALITY.md` 必须同为 35730 B。`12048` 表示走了合成回退，行为是精简版。
+
+手动注入任意 AI：把 `personality.md` 全文粘进 system prompt 或项目规则文件，保持全文完整，只粘 kernel 会丢掉 49 章操作约定。
+
+---
+
 ## 安装后自检清单
 
 ```bash
@@ -311,5 +375,6 @@ cd "$REPO" && ./verify.sh
 ```
 
 - pi：`wc -c ~/.pi/agent/personas/omp-purge.md` ≈ 12049，`/reload` 后首字符即产物
-- omp：`OMP_PURGE_PERSONA=/nonexistent omp-purge x` 返回 `exit=2`
+- omp：`wc -c ~/.omp/agent/PERSONALITY.md` = `35730`；`omp-armor --version` = `18.16.0`
+- DSH：`prompt-custom.json` 含 `"mode": "replace"`，`plugin/package.json` 存在
 - API：`python3 pipeline.py --selftest` 末行 `0 fail`；单请求 `--cat exact` 返回原文而非前言

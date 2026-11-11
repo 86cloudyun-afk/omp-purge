@@ -31,4 +31,13 @@ for c in cats:
 print("frames    OK")
 PY
 
+# personality 必须是完整版（存在时）
+if [ -f personality.md ]; then
+  pbytes=$(wc -c < personality.md | tr -d ' ')
+  [ "$pbytes" -ge 30000 ] || { echo "personality.md too small: $pbytes" >&2; exit 1; }
+  grep -q 'Operating Specification' personality.md
+  grep -q 'Format contract' personality.md
+  echo "personality OK ($pbytes B)"
+fi
+
 echo "all checks passed"
