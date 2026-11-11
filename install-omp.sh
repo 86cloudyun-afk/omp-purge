@@ -172,7 +172,8 @@ printf 'wrapper: %s\n' "$WRAPPER"
 printf 'wrapper head: '
 head -1 "$WRAPPER"
 echo "---- omp-armor --version (前 3 行) ----"
-"$WRAPPER" --version 2>&1 | head -3 || true
+# 自检时把刚装好的 omp 前缀并入 PATH; 否则新机器首装会误报 "exec: omp: not found"
+PATH="$LOCAL_BIN:$PREFIX/.npm-global/bin:$PATH" "$WRAPPER" --version 2>&1 | head -3 || true
 echo "============================================"
 log "完成。通道一: $PERSONALITY"
 log "      通道二: $WRAPPER (记得 $LOCAL_BIN 在 PATH 里)"
