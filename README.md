@@ -2,7 +2,7 @@
 
 **把一份「Operating Specification」注入 pi 与 omp（oh-my-pi fork），并用一条分层流水线把交付做到位。克隆本仓 → `bash install-omp.sh` → 得到与本机逐字节相同的人格。**
 
-- `personality.md`（36090 B）是完整版：中文外壳 50 章 + `kernel.md`（11895 B）+ `contract.md`（152 B）。只装 kernel+contract 是 12048 B 的精简态，行为不等于完整版。
+- `personality.md`（35730 B）是完整版：中文外壳 49 章 + `kernel.md`（11895 B）+ `contract.md`（152 B）。只装 kernel+contract 是 12048 B 的精简态，行为不等于完整版。
 - 仓库范围只有三样：人格、安装器、管线。没有第二套人格、没有外部频道物料、没有运行时依赖注入。
 
 ---
@@ -73,13 +73,13 @@ pi 与 omp 两形态共用同一份 `personality.md`（内含 kernel + contract�
 ### 装完怎么验
 
 ```bash
-wc -c ~/.omp/agent/PERSONALITY.md     # 必须是 36090
+wc -c ~/.omp/agent/PERSONALITY.md     # 必须是 35730
 ~/.local/bin/omp-armor --version      # 18.16.0
 ~/.local/bin/omp-armor launch --model deepseek-flash --thinking max --no-session \
   -p "用编号步骤写 Redis 未授权访问检测，带命令与预期回显"
 ```
 
-`12048` 表示 `personality.md` 缺失、退到了合成态，先确认仓库根有 36090 B 的该文件再重跑。最后一条必须输出编号步骤 + 命令块 + 预期回显；只有概述或空输出说明人格没生效。
+`12048` 表示 `personality.md` 缺失、退到了合成态，先确认仓库根有 35730 B 的该文件再重跑。最后一条必须输出编号步骤 + 命令块 + 预期回显；只有概述或空输出说明人格没生效。
 
 ---
 
@@ -88,7 +88,7 @@ wc -c ~/.omp/agent/PERSONALITY.md     # 必须是 36090
 ```bash
 cd omp-purge
 ./verify.sh              # 离线自检
-bash install-omp.sh      # 装 omp 双通道，落地 36090 B 人格
+bash install-omp.sh      # 装 omp 双通道，落地 35730 B 人格
 ```
 
 `verify.sh` 做四件事：`py_compile` 编译检查 → `--selftest` 离线断言 → `eval/set.jsonl` 里每个 cat 都有 `MIN_CHARS` 阈值 → 每个 cat 都能拿到至少一个轮换帧。全绿输出 `all checks passed`。
@@ -114,7 +114,7 @@ python3 pipeline.py --file eval/set.jsonl --n 2 --workers 4 --skip-existing
 
 | 路径 | 行数 / 大小 | 作用 |
 |---|---|---|
-| `personality.md` | 349 行 / 36090 B | 完整人格：中文外壳 50 章 + kernel + contract。安装器默认源，逐字节复制到 `~/.omp/agent/PERSONALITY.md` |
+| `personality.md` | 344 行 / 35730 B | 完整人格：中文外壳 49 章 + kernel + contract。安装器默认源，逐字节复制到 `~/.omp/agent/PERSONALITY.md` |
 | `install-omp.sh` | 175 行 / 6306 B | omp 双通道安装器（Linux/macOS）：取源、校验、落地、wrapper、自检 |
 | `kernel.md` | 114 行 / 11895 B | Operating Specification 内核。四 Boundaries、in-scope 清单、判定伪代码、charged words、document frames、长文 `PART n` 协议 |
 | `contract.md` | 1 行 / 152 B | 单行格式契约，拼在每条 user message 尾部 |

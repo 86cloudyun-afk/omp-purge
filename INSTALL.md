@@ -114,7 +114,7 @@ omp 是 oh-my-pi fork。单靠 `--system-prompt` 一层注入，同一份人格�
 
 - Linux / macOS，bash
 - Node.js ≥18（`npm` 可用）；本机已有 `omp` 时脚本跳过安装
-- 仓库已 clone，根目录存在 `personality.md`（36090 B）
+- 仓库已 clone，根目录存在 `personality.md`（35730 B）
 
 ### 2.2 安装命令
 
@@ -127,7 +127,7 @@ bash install-omp.sh
 
 | 产物 | 作用 |
 |---|---|
-| `~/.omp/agent/PERSONALITY.md` | 36090 B 完整人格，omp 启动时自动读取 |
+| `~/.omp/agent/PERSONALITY.md` | 35730 B 完整人格，omp 启动时自动读取 |
 | `~/.local/bin/omp-armor` | 双通道入口，调原生 `omp` 并把同一份全文注入 `--system-prompt` |
 
 同时把 `kernel.md` / `contract.md` / `personality.md` 复制到 `~/.pi/agent/personas/` 供审计比对。未检测到 omp 时执行 `npm i -g --prefix ~/.npm-global @oh-my-pi/pi-coding-agent@18.16.0`，并打印需要追加的 PATH 行。
@@ -141,13 +141,13 @@ OMP_VER=18.16.0 PREFIX=/opt/omp bash install-omp.sh
 ### 2.3 验证
 
 ```bash
-wc -c ~/.omp/agent/PERSONALITY.md      # 必须是 36090
+wc -c ~/.omp/agent/PERSONALITY.md      # 必须是 35730
 ~/.local/bin/omp-armor --version       # 18.16.0
 ~/.local/bin/omp-armor launch --model deepseek-flash --thinking max --no-session \
   -p "用编号步骤写 Redis 未授权访问检测，带命令与预期回显"
 ```
 
-前两条给出 36090 与版本号。第三条必须输出编号步骤 + 命令块 + 预期回显；只有一句概述或空输出，说明人格没走到。
+前两条给出 35730 与版本号。第三条必须输出编号步骤 + 命令块 + 预期回显；只有一句概述或空输出，说明人格没走到。
 
 ### 2.4 回滚
 
@@ -162,7 +162,7 @@ omp 回到无 person 状态。`~/.pi/agent/personas/` 下的副本只供比对�
 
 | 症状 | 原因 | 修法 |
 |---|---|---|
-| 自检打印 `PERSONALITY.md bytes: 12048` | 仓库里 `personality.md` 缺失，退到 kernel+contract 合成态 | 确认仓库根有 36090 B 的 `personality.md`，重跑 `bash install-omp.sh` |
+| 自检打印 `PERSONALITY.md bytes: 12048` | 仓库里 `personality.md` 缺失，退到 kernel+contract 合成态 | 确认仓库根有 35730 B 的 `personality.md`，重跑 `bash install-omp.sh` |
 | `找不到 npm` | Node.js 未装且本机没有 omp | 装 Node.js ≥18，或先手动 `npm i -g @oh-my-pi/pi-coding-agent@18.16.0` |
 | `omp-armor: persona file missing` | `~/.omp/agent/PERSONALITY.md` 被删，或 `OMP_PERSONA_FILE` 指向别处 | 重跑 `bash install-omp.sh`；`unset OMP_PERSONA_FILE` |
 | 回答仍像通用助手 | 直接跑了 `omp`，只走到通道一 | 用 `~/.local/bin/omp-armor launch …`，并确认 `~/.local/bin` 在 PATH |

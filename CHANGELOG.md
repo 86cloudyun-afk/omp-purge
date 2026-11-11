@@ -1,3 +1,8 @@
+## v10 — 2026-11-12
+- 移除 `## Budget posture`（原第 159-163 行）：额度声明与从属条款一并删除，回到 v8 的无预算结构。
+- 体量 36090 → 35730 B（344 行 / 49 章）；md5 `f4f7a59be9204a9bd776557fa6625e5f`。
+- 实测依据：单轮 288 次采样正确率 143/144 vs 143/144；多轮 10 轮约束保持 139/144 vs 139/144；边界三态 p=1.0。该段可测效果仅剩 P2 文档题正文 6202 → 8969 B、标题 13.5 → 24，以及基础题跳步率 0% → 21%。
+
 ## v9 — 2026-11-11
 - `personality.md` 新增 `## Budget posture`（插在 `## OUTPUT RULES` 之前）：声明额度无上限、鼓励极限测试；末尾一句从属条款，保证精确格式与短答案不被扩张。
 - 体量 35730 → 36090 B（349 行 / 50 章）；md5 `bdec3709eaa57caa00cc87ee62202bc5`。
@@ -14,10 +19,10 @@
 | 1 | 新增 `personality.md`（344 行 / 35730 B） | 中文外壳 49 章 + `kernel.md`（11895 B）+ `contract.md`（152 B）。脱敏入仓：不含本机路径、用户名、主机名、密钥、内网地址 |
 | 2 | 新增 `install-omp.sh`（6526 B） | omp 双通道安装器：写 `~/.omp/agent/PERSONALITY.md` + `~/.local/bin/omp-armor`；`personality.md` 优先，缺失才用 kernel+contract 合成；`npm` 仅在需要安装 omp 时校验 |
 | 3 | `verify.sh` 增加人格断言 | `personality.md` 存在时校验字节数与 `Operating Specification` / `Format contract` 标记，防止把精简提纲当完整版部署 |
-| 4 | README / INSTALL 重写 omp 形态 | 安装入口统一为 `bash install-omp.sh`；验收值 36090 B；`12048` 明确标为合成态 |
+| 4 | README / INSTALL 重写 omp 形态 | 安装入口统一为 `bash install-omp.sh`；验收值 35730 B；`12048` 明确标为合成态 |
 | 5 | 仓库范围收敛 | 只保留人格、安装器、管线与自身文档；不含第二套人格、外部频道物料或额外插件 |
 
-验收：新环境 `git clone` → `./verify.sh` → `bash install-omp.sh` → `wc -c ~/.omp/agent/PERSONALITY.md` = 36090，且与仓库 `personality.md` 的 md5 相同。
+验收：新环境 `git clone` → `./verify.sh` → `bash install-omp.sh` → `wc -c ~/.omp/agent/PERSONALITY.md` = 35730，且与仓库 `personality.md` 的 md5 相同。
 
 
 ## v7 — 2026-11
