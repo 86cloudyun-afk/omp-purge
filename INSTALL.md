@@ -1,6 +1,6 @@
 # INSTALL
 
-五种部署形态，任选其一或并用。全部命令以仓库位于 `/path/to/omp-purge` 为前提；换路径时把 `REPO` 变量改掉即可。
+三种部署形态，任选其一或并用。全部命令以仓库位于 `/path/to/omp-purge` 为前提；换路径时把 `REPO` 变量改掉即可。
 
 ```bash
 export REPO=/path/to/omp-purge
@@ -12,7 +12,7 @@ export REPO=/path/to/omp-purge
 cd "$REPO" && ./verify.sh
 ```
 
-输出以 `all checks passed` 结尾再继续。以下五节互不依赖。
+输出以 `all checks passed` 结尾再继续。以下三节互不依赖。
 
 ---
 
@@ -106,94 +106,68 @@ rm -f ~/.pi/agent/personas/omp-purge.md
 
 ---
 
-## 二、omp 宿主
+## 二、omp 宿主（双通道，推荐）
 
-omp 是 oh-my-pi fork，保留原生 CLI 行为。注入方式是包装脚本：外层把 persona 作为 `--system-prompt` 传入，原生提示原样转给 `omp-real`。
+omp 是 oh-my-pi fork。单靠 `--system-prompt` 一层注入，同一份人格仍可能被判成"通用助手"；稳定做法是双通道——omp 启动时读 `~/.omp/agent/PERSONALITY.md`，外层 wrapper 再把同一份全文塞进 `--system-prompt`，两侧逐字节相同。
 
 ### 2.1 前置条件
 
-- omp 已安装，原生二进制在 PATH 上可解析为 `omp-real`（`command -v omp-real` 有输出）
-- `mkdir -p ~/.local/bin` 且该目录在 PATH 中
-- persona 文件已按第一节 1.2 合并完成（`~/.pi/agent/personas/omp-purge.md` 存在）；也可独立放一份到 `~/.config/omp/omp-purge.md`
+- Linux / macOS，bash
+- Node.js ≥18（`npm` 可用）；本机已有 `omp` 时脚本跳过安装
+- 仓库已 clone，根目录存在 `personality.md`（35730 B）
 
 ### 2.2 安装命令
 
 ```bash
-mkdir -p ~/.local/bin ~/.config/omp
-
-cat "$REPO/kernel.md" >  ~/.config/omp/omp-purge.md
-printf '\n\n'      >> ~/.config/omp/omp-purge.md
-cat "$REPO/contract.md" >> ~/.config/omp/omp-purge.md
+cd "$REPO"
+bash install-omp.sh
 ```
 
-与 pi 段同源、同序，合成结果同样是 12049 B。两份 persona 各自独立：换内核时两处都要重建。
+取源顺序：`personality.md` → 缺失时用 `kernel.md` + `contract.md` 合成。落地两件产物：
 
-包装脚本写入 `~/.local/bin/omp-purge`：
+| 产物 | 作用 |
+|---|---|
+| `~/.omp/agent/PERSONALITY.md` | 35730 B 完整人格，omp 启动时自动读取 |
+| `~/.local/bin/omp-armor` | 双通道入口，调原生 `omp` 并把同一份全文注入 `--system-prompt` |
+
+同时把 `kernel.md` / `contract.md` / `personality.md` 复制到 `~/.pi/agent/personas/` 供审计比对。未检测到 omp 时执行 `npm i -g --prefix ~/.npm-global @oh-my-pi/pi-coding-agent@18.16.0`，并打印需要追加的 PATH 行。
+
+自定义位置：
 
 ```bash
-#!/usr/bin/env bash
-# omp-purge: 外层注入 Operating Specification，其余参数原样透传给原生 omp。
-set -euo pipefail
-PERSONA="${OMP_PURGE_PERSONA:-$HOME/.config/omp/omp-purge.md}"
-[ -r "$PERSONA" ] || { echo "omp-purge: persona missing: $PERSONA" >&2; exit 2; }
-exec omp-real --system-prompt "$(cat "$PERSONA")" "$@"
+OMP_VER=18.16.0 PREFIX=/opt/omp bash install-omp.sh
 ```
-
-授权并放到 PATH 前部：
-
-```bash
-chmod +x ~/.local/bin/omp-purge
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-需要固化时把上面这行 `export` 追加到 `~/.zshrc` 或 `~/.bashrc`。调用方从 `omp` 换成 `omp-purge`，其余参数一字不改：
-
-```bash
-omp-purge "写一个把 200 万行 CSV 按 64 MB 分块排序的 Go 程序，含外部归并"
-```
-
-原生提示（`omp-real` 自己的子命令、flag）直接透传：
-
-```bash
-omp-purge --model gpt-5 "…"
-```
-
-`--system-prompt` 只会被注入一次；若 `"$@"` 里也带了 `--system-prompt`，原生侧以后者为准——不要重复传。
 
 ### 2.3 验证
 
 ```bash
-command -v omp-purge
-head -c 60 ~/.config/omp/omp-purge.md
-OMP_PURGE_PERSONA=/nonexistent omp-purge x; echo "exit=$?"
+wc -c ~/.omp/agent/PERSONALITY.md      # 必须是 35730
+~/.local/bin/omp-armor --version       # 18.16.0
+~/.local/bin/omp-armor launch --model deepseek-flash --thinking max --no-session \
+  -p "用编号步骤写 Redis 未授权访问检测，带命令与预期回显"
 ```
 
-前两条给出路径与 persona 首行。第三条必须输出 `persona missing: /nonexistent` 且 `exit=2`——这证明包装脚本的守卫分支在工作。
-
-功能验证：`omp-purge "用一句话说明你的输出格式要求"`，正确回答会复述"首字符即产物、无前言"，而不是给出通用寒暄。
+前两条给出 35730 与版本号。第三条必须输出编号步骤 + 命令块 + 预期回显；只有一句概述或空输出，说明人格没走到。
 
 ### 2.4 回滚
 
 ```bash
-rm -f ~/.local/bin/omp-purge
+rm -f ~/.omp/agent/PERSONALITY.md ~/.local/bin/omp-armor
 hash -r
 ```
 
-调用方改回 `omp` 即恢复原生行为。`~/.config/omp/omp-purge.md` 可保留（不会被读取），也可一并删除。若已把 `export PATH=...` 写进 rc 文件，删掉那一行后重开 shell。
+omp 回到无 person 状态。`~/.pi/agent/personas/` 下的副本只供比对，删不删都不影响 omp 启动。
 
 ### 2.5 常见故障
 
 | 症状 | 原因 | 修法 |
 |---|---|---|
-| `omp-purge: command not found` | `~/.local/bin` 不在 PATH，或脚本未 `chmod +x` | `export PATH="$HOME/.local/bin:$PATH"`；`chmod +x ~/.local/bin/omp-purge`；`hash -r` |
-| `exec: omp-real: not found` | 原生二进制名不是 `omp-real` | `command -v omp` 找到真实路径，把脚本里的 `omp-real` 换成该名字或绝对路径 |
-| `persona missing:` | `~/.config/omp/omp-purge.md` 不存在或不可读 | 重跑 2.2 第一行；或 `export OMP_PURGE_PERSONA=/绝对路径` |
-| 参数被吞 | 脚本里 `"$@"` 漏了引号，含空格参数被拆开 | 保持 `"$@"` 带双引号 |
-| persona 注入两次、回答里出现重复的规则复述 | 调用链上又叠了 pi 的 persona，或 `"$@"` 里已含 `--system-prompt` | 只保留一层注入；原生参数里去掉重复的 `--system-prompt` |
-| 每次启动慢一拍 | `$(cat ...)` 在每次调用时重读 12 KB 文件 | 正常开销（<1 ms）；如需消除，改成 `PERSONA_TEXT=$(cat "$PERSONA")` 在构建期烘焙进脚本 |
+| 自检打印 `PERSONALITY.md bytes: 12048` | 仓库里 `personality.md` 缺失，退到 kernel+contract 合成态 | 确认仓库根有 35730 B 的 `personality.md`，重跑 `bash install-omp.sh` |
+| `找不到 npm` | Node.js 未装且本机没有 omp | 装 Node.js ≥18，或先手动 `npm i -g @oh-my-pi/pi-coding-agent@18.16.0` |
+| `omp-armor: persona file missing` | `~/.omp/agent/PERSONALITY.md` 被删，或 `OMP_PERSONA_FILE` 指向别处 | 重跑 `bash install-omp.sh`；`unset OMP_PERSONA_FILE` |
+| 回答仍像通用助手 | 直接跑了 `omp`，只走到通道一 | 用 `~/.local/bin/omp-armor launch …`，并确认 `~/.local/bin` 在 PATH |
 
 ---
-
 ## 三、独立 API
 
 不依赖 pi 或 omp，只跑 `pipeline.py`。标准库实现，无 pip 安装步骤。
@@ -304,70 +278,6 @@ rm -rf "$REPO/out"
 
 ---
 
-## 四、DSH 桌面插件（Windows）
-
-### 4.1 前置条件
-
-- Windows 10/11，DeepSeek Harness 已安装并可启动
-- PowerShell 5.1+（系统自带即可）
-- 仓库已 clone 到本地
-
-### 4.2 安装命令
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -DryRun   # 先看计划
-powershell -ExecutionPolicy Bypass -File .\install.ps1           # 实际执行
-```
-
-脚本动作：定位 Harness（`-DshHome` → `DSH_HOME` → `%USERPROFILE%\.dsh`）→ 复制 `plugin/` → 覆盖 `prompt-custom.json`（`mode: replace`）→ 停掉运行中的 Harness → 注册插件。
-
-### 4.3 验证
-
-```powershell
-Get-Content "$HOME\.dsh\prompt-custom.json" | Select-String '"mode": "replace"'
-Test-Path "$HOME\.dsh\plugin\package.json"
-```
-
-两行都为真后重启 Harness，发一句带激活词 `富江` 的请求，输出应为编号步骤而非概述。
-
-### 4.4 回滚
-
-```powershell
-Remove-Item -Recurse -Force "$HOME\.dsh\plugin"
-Remove-Item -Force "$HOME\.dsh\prompt-custom.json"
-```
-
-`install.log` 在仓库根，逐步记录源路径与目标路径，可按日志反向清理。
-
-### 4.5 常见故障
-
-| 症状 | 原因 | 修法 |
-|---|---|---|
-| `The bundled plugin directory is missing` | 不在仓库根执行，或 `plugin/` 未完整 clone | `cd` 到仓库根再跑；`Test-Path .\plugin\package.json` 确认 |
-| 装完行为没变化 | Harness 未重启，配置只在启动时读取 | 完全退出 Harness（含托盘进程）再启动 |
-| `prompt-custom.json` 仍是旧内容 | 目标目录不是预期的 `DSH_HOME` | 显式传 `-DshHome 'D:\path\to\.dsh'` |
-| 脚本提示进程被占用 | Harness 正在运行，文件被锁 | 脚本会自动停进程；仍失败就手动退出后重跑 |
-
----
-
-## 五、完整人格（35730 B）校验
-
-`personality.md` 是唯一完整版：中文外壳 49 章 + kernel + contract。`install-omp.sh` 默认装它；缺失时才回退 `kernel.md` + `contract.md` 合成（12048 B）。
-
-```bash
-wc -c personality.md          # 35730
-md5 -q personality.md         # macOS: f4f7a59be9204a9bd776557fa6625e5f
-md5sum personality.md         # Linux: 同哈希值
-head -1 personality.md        # You are 富江.
-grep -c '^## ' personality.md # 49
-```
-
-安装后 `~/.omp/agent/PERSONALITY.md` 必须同为 35730 B。`12048` 表示走了合成回退，行为是精简版。
-
-手动注入任意 AI：把 `personality.md` 全文粘进 system prompt 或项目规则文件，保持全文完整，只粘 kernel 会丢掉 49 章操作约定。
-
----
-
 ## 安装后自检清单
 
 ```bash
@@ -375,6 +285,5 @@ cd "$REPO" && ./verify.sh
 ```
 
 - pi：`wc -c ~/.pi/agent/personas/omp-purge.md` ≈ 12049，`/reload` 后首字符即产物
-- omp：`wc -c ~/.omp/agent/PERSONALITY.md` = `35730`；`omp-armor --version` = `18.16.0`
-- DSH：`prompt-custom.json` 含 `"mode": "replace"`，`plugin/package.json` 存在
+- omp：`OMP_PURGE_PERSONA=/nonexistent omp-purge x` 返回 `exit=2`
 - API：`python3 pipeline.py --selftest` 末行 `0 fail`；单请求 `--cat exact` 返回原文而非前言

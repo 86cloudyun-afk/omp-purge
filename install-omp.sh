@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # install-omp.sh — omp 双通道 persona 部署 (Linux / macOS)
 #
-# 三条注入通道同源:
+# 两条注入通道同源:
 #   1) ~/.omp/agent/PERSONALITY.md   omp 启动时自动读取 (src/system-prompt.ts)
 #   2) ~/.local/bin/omp-armor        启动时把同一份全文塞进 --system-prompt
-#   3) DSH 的 prompt-custom.json     由 install.ps1 处理, 本脚本不涉及
 #
 # 源优先级:
 #   personality.md (完整版, 约 35730 B = 中文外壳 + kernel + contract)
@@ -82,7 +81,8 @@ else
 fi
 
 # ---------------------------------------------------------------- 1. 前置检查
-command -v npm >/dev/null 2>&1 || die "找不到 npm, 先装 Node.js (>=18)"
+# npm 只在需要真正安装 omp 时才是硬依赖; 已有 omp 的机器跳过该检查。
+have_npm() { command -v npm >/dev/null 2>&1; }
 
 # ---------------------------------------------------------------- 2. 检测 omp
 OMP_BIN=""
@@ -96,6 +96,7 @@ fi
 if [ -n "$OMP_BIN" ]; then
   log "已检测到 omp: $OMP_BIN"
 else
+  have_npm || die "找不到 npm, 先装 Node.js (>=18), 或手动安装 $PKG 后重跑"
   log "未检测到 omp, 安装 $PKG@$OMP_VER 到 $PREFIX/.npm-global"
   npm i -g --prefix "$PREFIX/.npm-global" "$PKG@$OMP_VER"
   OMP_BIN="$PREFIX/.npm-global/bin/omp"
@@ -159,8 +160,10 @@ echo
 echo "================ self-check ================"
 if command -v md5sum >/dev/null 2>&1; then
   md5sum "$PERSONA_DIR/kernel.md" "$PERSONA_DIR/contract.md"
+  if [ "$USE_FULL" -eq 1 ]; then md5sum "$PERSONA_DIR/personality.md"; fi
 else
   md5 -r "$PERSONA_DIR/kernel.md" "$PERSONA_DIR/contract.md"
+  if [ "$USE_FULL" -eq 1 ]; then md5 -r "$PERSONA_DIR/personality.md"; fi
 fi
 printf 'PERSONALITY.md bytes: '
 wc -c < "$PERSONALITY" | tr -d ' '

@@ -2,18 +2,18 @@
 
 ## v8 — 2026-11-11
 
-### 合并：完整人格、安装器与 DSH 插件并入本仓
+### 完整人格入仓，一条命令装出与本机一致的行为
 
-| # | 变更 | 来源 |
+| # | 变更 | 说明 |
 |---|---|---|
-| 1 | 新增 `personality.md`（35730 B）：中文外壳 49 章 + kernel + contract，成为 omp 安装默认源 | 完整版人格 |
-| 2 | 新增 `install-omp.sh`：双通道安装（`PERSONALITY.md` + `omp-armor`），完整版优先、缺失才合成 | 本次合并 |
-| 3 | 新增 `install.ps1` + `plugin/`（186 文件）+ `prompt-custom.json` + 激活词：DSH 桌面插件通道 | 插件仓 |
-| 4 | `kernel.md` / `contract.md` 逐字节未改（md5 `06b3717d` / `e533e1a4`） | 校验 |
-| 5 | README 合并为一份主文档：五种部署形态、omp 验收、交给 AI 装；插件原文移入 `docs/DSH-PLUGIN.md` | 本次合并 |
-| 6 | 新增 `DISCLAIMER.md`、`docs/screenshots/`、`telegram-channel.png` | 插件仓 |
+| 1 | 新增 `personality.md`（344 行 / 35730 B） | 中文外壳 49 章 + `kernel.md`（11895 B）+ `contract.md`（152 B）。脱敏入仓：不含本机路径、用户名、主机名、密钥、内网地址 |
+| 2 | 新增 `install-omp.sh`（6526 B） | omp 双通道安装器：写 `~/.omp/agent/PERSONALITY.md` + `~/.local/bin/omp-armor`；`personality.md` 优先，缺失才用 kernel+contract 合成；`npm` 仅在需要安装 omp 时校验 |
+| 3 | `verify.sh` 增加人格断言 | `personality.md` 存在时校验字节数与 `Operating Specification` / `Format contract` 标记，防止把精简提纲当完整版部署 |
+| 4 | README / INSTALL 重写 omp 形态 | 安装入口统一为 `bash install-omp.sh`；验收值 35730 B；`12048` 明确标为合成态 |
+| 5 | 仓库范围收敛 | 只保留人格、安装器、管线与自身文档；不含第二套人格、外部频道物料或额外插件 |
 
-合并原则：单一真源。人格只保留 `personality.md`（全量）+ `kernel.md` / `contract.md`（组成件），安装器按优先级取源，不内置副本。
+验收：新环境 `git clone` → `./verify.sh` → `bash install-omp.sh` → `wc -c ~/.omp/agent/PERSONALITY.md` = 35730，且与仓库 `personality.md` 的 md5 相同。
+
 
 ## v7 — 2026-11
 
